@@ -41,7 +41,7 @@ const WASM = join(
   dirname(fileURLToPath(import.meta.url)),
   "..",
   "..",
-  "rustsearch",
+  "..",
   "wasm",
   "pkg-node",
   "rustsearch_wasm.js",
