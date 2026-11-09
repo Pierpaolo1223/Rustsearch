@@ -49,8 +49,8 @@ index…** and select `demo/index.rsx`.
 | path | what |
 |---|---|
 | `vendor/pkg-web/` | `wasm-bindgen --target web` output, loaded by `core/engine.worker.js` |
-| `demo/site/` | one HTML page per Markdown section in the repository, plus the 8 curated pages |
-| `demo/index.rsx` | format v5, `--stemmer en`, facets, `--max-page-chars 2117`, `--term-chunk-bytes 64k`; **~10,000 documents**, 25 chunks |
+| `demo/site/` | one HTML page per Markdown section under `SEARCHUI_CORPUS_ROOT`, plus the 8 curated pages |
+| `demo/index.rsx` | format v5, `--stemmer en`, facets, `--max-page-chars 2117`, `--term-chunk-bytes 64k`; the document and chunk counts follow the corpus, and `rustsearch info demo/index.rsx` prints both |
 | `demo/shards/` | `demo/index.rsx` published by `rustsearch shard` (manifest, `meta`, `docrecords`, one object per chunk, `strings`, `texts`); what the page loads |
 
 The demo size follows the Markdown under `SEARCHUI_CORPUS_ROOT` (the workspace by
@@ -338,8 +338,8 @@ about the rendering code knows where the engine runs.
 
 ## Safety and accessibility
 
-Design rules came from a consultation with the local design/security corpus
-(`askd.sh`): contrast 4.5:1 for text and 3:1 for borders/focus, visible focus
+Design rules came from a consultation with a local design/security corpus:
+contrast 4.5:1 for text and 3:1 for borders/focus, visible focus
 rings, 24 × 24 px minimum targets, five list states, `prefers-reduced-motion`,
 labels and declared language.
 
