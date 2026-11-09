@@ -132,7 +132,10 @@ jobs:
           cargo install cargo-cyclonedx --locked
           cargo cyclonedx --format json --all
           mkdir -p sbom
-          find . -name '*.cdx.json' -not -path './target/*' -exec cp {} sbom/ \;
+          # Prune `sbom/` itself: find would otherwise copy each collected file onto
+          # the copy it just made and warn "are the same file" for every one.
+          find . -path ./sbom -prune -o -name '*.cdx.json' -not -path './target/*' \
+            -exec cp {} sbom/ \;
           ls -l sbom
       - uses: actions/upload-artifact@v4
         with:
