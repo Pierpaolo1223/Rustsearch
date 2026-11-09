@@ -92,3 +92,6 @@ desktop.ini
 /SKILLS.md
 /PRODUCT_REVIEW.md
 /ROADMAP.md
+
+# Private measurement log: kept on disk, never committed.
+/OPTIMIZATIONS.md
