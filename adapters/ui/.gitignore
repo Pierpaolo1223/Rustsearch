@@ -1,2 +1,6 @@
 /vendor/
 /demo/
+
+# Python bytecode left behind by running serve.py locally
+__pycache__/
+*.py[cod]
