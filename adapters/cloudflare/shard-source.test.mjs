@@ -8,9 +8,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  MAX_CURATION_BYTES,
   chunkPartName,
   fnv1a64Hex,
   loadAllDocPages,
+  loadCurations,
   loadDocPages,
   loadQueryChunks,
   loadSparseIndex,
@@ -461,6 +463,59 @@ test("a pinned manifest digest is checked before the manifest is parsed", async 
     "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
     "the WebCrypto digest must be plain SHA-256",
   );
+});
+
+test("a shard set published under a versioned prefix is read from that prefix", async () => {
+  const { objects, total } = shardSet();
+  const digest = await sha256Hex(objects["index/manifest.txt"]);
+  // The same set, uploaded under `index/<digest>/` without regenerating the manifest:
+  // its part keys still say `index/...`, and the loader re-bases them.
+  const prefix = `index/${digest}/`;
+  const versioned = {};
+  for (const [key, bytes] of Object.entries(objects)) {
+    versioned[prefix + key.slice("index/".length)] = bytes;
+  }
+  const bucket = new FakeBucket(versioned);
+  const loaded = await loadSparseIndex(bucket, `${prefix}manifest.txt`, {
+    expectManifestDigest: digest,
+  });
+  assert.equal(loaded.bytes.length, total);
+  assert.ok(
+    loaded.manifest.parts.every((part) => part.key.startsWith(prefix)),
+    "every part is re-based on the manifest's directory",
+  );
+  assert.ok(bucket.requests.every((request) => request.key.startsWith(prefix)));
+});
+
+test("curation is read as bytes and pinned to its digest", async () => {
+  const text = "install | pin /docs/install.html\n";
+  const bytes = new TextEncoder().encode(text);
+  const digest = await sha256Hex(bytes);
+  const loaded = await loadCurations(
+    new FakeBucket({ "index/curate.txt": bytes }),
+    "index/curate.txt",
+    { expectDigest: `sha256:${digest}` },
+  );
+  assert.deepEqual(loaded, { status: "loaded", text });
+
+  // A substituted rule file never reaches the parser.
+  const tampered = new FakeBucket({
+    "index/curate.txt": new TextEncoder().encode(`${text}install | pin /evil.html\n`),
+  });
+  const mismatch = await loadCurations(tampered, "index/curate.txt", {
+    expectDigest: digest,
+  });
+  assert.equal(mismatch.status, "digest-mismatch");
+  assert.equal(mismatch.text, undefined);
+
+  // Missing and oversized files are statuses, not exceptions: curation is optional.
+  assert.deepEqual(await loadCurations(new FakeBucket({}), "index/curate.txt"), {
+    status: "missing",
+  });
+  const oversized = new FakeBucket({ "index/curate.txt": bytesOf(MAX_CURATION_BYTES + 1) });
+  const large = await loadCurations(oversized, "index/curate.txt");
+  assert.equal(large.status, "too-large");
+  assert.equal(large.bytes, MAX_CURATION_BYTES + 1);
 });
 
 test("a truncated fuzzy plan is reported on the response", async () => {

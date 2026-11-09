@@ -518,14 +518,17 @@ loads the shard set's metadata from R2 once per isolate with `Range` requests â€
 `meta` object for a chunked artifact â€” keeps the sparse `Engine`, and reads each
 query's term chunks, each hit's record page and each hit's URL+title and text block on
 demand;
-the objects are cached immutably, so a rebuild writes new keys. The query endpoint
+the objects are cached immutably, so `INDEX_KEY = "index/{digest}/manifest.txt"`
+publishes each build under its manifest digest and a rebuild writes new keys instead
+of overwriting the ones a cached manifest names. The query endpoint
 is `GET /search?q=...&limit=...&fuzzy=1&filter=section%3Dguide&boost=5&group=1` and
 returns JSON only. Explicit fuzzy expansion is opt-in and bounded to a 64-chunk plan;
 `planTruncated` reports when the plan is incomplete. Automatic one-edit typo
 correction is available for flat indexes, not the chunked Worker index. `filter` is
 repeatable, `boost` sets the title weight (default 2, `0` for body only), and
 `group=1` returns one hit per page. An optional `CURATE_KEY` applies the CLI's
-editorial curation rules.
+editorial curation rules; `CURATE_DIGEST` pins their content, and a rule file that
+does not match is ignored (with a logged reason) so the ranking stays uncurated.
 
 ## Sharding for R2
 
@@ -692,6 +695,8 @@ fetched keeps an empty URL and title. Four independent checks guard the bytes:
   pins the manifest with `MANIFEST_DIGEST` (the `sha256:` value `rustsearch shard`
   writes to `manifest.txt.sha256`): a substituted set is refused before it is
   parsed, and a malformed pin fails the query closed instead of running unpinned.
+  The same pin versions the prefix (`{digest}` in `INDEX_KEY`), and `CURATE_DIGEST`
+  pins the optional rule file, which is ignored when it does not match.
 * Editorial curation (`search --curate FILE`, or the browser/Worker curation input)
   can pin or boost only hits already returned for a query. It cannot introduce a
   document, and paths must be same-site. Rules are separate from the immutable

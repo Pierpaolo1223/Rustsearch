@@ -14,25 +14,31 @@ cargo build -p rustsearch-wasm --target wasm32-unknown-unknown --release
 wasm-bindgen --target web --out-dir adapters/cloudflare/pkg \
   target/wasm32-unknown-unknown/release/rustsearch_wasm.wasm
 
-# 3. upload the manifest and every part
+# 3. publish the set under its manifest digest, so a rebuild never overwrites keys
+DIGEST=$(cut -d: -f2 dist/index/manifest.txt.sha256)
 for file in dist/index/*; do
-  wrangler r2 object put "rustsearch-index/index/$(basename "$file")" --file "$file"
+  wrangler r2 object put "rustsearch-index/index/$DIGEST/$(basename "$file")" --file "$file"
 done
 
-# 4. point INDEX_KEY at the manifest, then deploy
+# 4. point INDEX_KEY at the versioned manifest, then deploy
 cp wrangler.toml.example wrangler.toml
-# edit INDEX_KEY = "index/manifest.txt" if you used another prefix
+# INDEX_KEY = "index/{digest}/manifest.txt"  (resolved from MANIFEST_DIGEST)
+# MANIFEST_DIGEST = "sha256:$DIGEST"
 wrangler deploy
 
-# 5. optional: editorial rules (`rustsearch search --curate FILE`)
-wrangler r2 object put "rustsearch-index/index/curate.txt" --file curate.txt
-# and in wrangler.toml: CURATE_KEY = "index/curate.txt"
+# 5. optional: editorial rules (`rustsearch search --curate FILE`), by content hash
+HASH=$(sha256sum curate.txt | cut -d' ' -f1)
+wrangler r2 object put "rustsearch-index/curate/$HASH.txt" --file curate.txt
+# CURATE_KEY = "curate/{digest}.txt"
+# CURATE_DIGEST = "sha256:$HASH"
 ```
 
 On every object, set `Cache-Control: public, max-age=31536000, immutable` and
-`Content-Type: application/octet-stream`. A rebuild writes new keys; a deploy is a
-manifest swap. Keep the manifest's key short-lived (`no-cache`) and the parts
-immutable.
+`Content-Type: application/octet-stream`. Because `INDEX_KEY` carries `{digest}`, each
+build lands on new keys and a deploy is a manifest swap, not an overwrite. Keep the
+manifest's key short-lived (`no-cache`) and the parts immutable. The part keys inside
+the manifest are re-based on the directory the manifest was read from, so publishing
+the same set under a versioned prefix needs no regeneration.
 
 ## What a request does
 
@@ -49,7 +55,8 @@ immutable.
    `loadSparseIndex(bucket, key, { expectManifestDigest })`, which checks its SHA-256
    with WebCrypto before parsing it, so a substituted set is refused even when every
    FNV in it was recomputed. Unset keeps the per-part hashes only; a malformed value
-   fails the query closed (503) instead of running unpinned.
+   fails the query closed (503) instead of running unpinned. `INDEX_KEY` resolves
+   `{digest}` against that pin, so the whole set can live under a versioned prefix.
 2. **Query** — `engine.searchJson(q, limit)` ranks against the metadata; with
    `?fuzzy=1`, `?filter=field=value` (repeatable, at most eight), `?boost=N` or
    `?group=1` it calls `searchJsonWithOptions(q, limit, true, fuzzy, 1, boost,
@@ -82,11 +89,15 @@ immutable.
    cannot grow without bound.
 6. **Curation (optional)** — when `CURATE_KEY` is set, the isolate reads that object
    once and calls `engine.setCurations(text)`: the same parser as the CLI, so
-   `query | pin /path` and `query | boost /path 1.5` behave identically here. The
-   object is capped at 64 KiB and a missing or malformed file is ignored rather than
-   failing the request — a rule file is editorial convenience, not part of the index.
-   The response carries `"curations": N` when rules are loaded, so a deploy that
-   forgot the file is distinguishable from one with an empty file.
+   `query | pin /path` and `query | boost /path 1.5` behave identically here. With
+   `CURATE_DIGEST` set, the bytes are hashed **before** decoding and a file that does
+   not match never reaches the parser; `{digest}` in `CURATE_KEY` resolves to that
+   hash, so `curate/{digest}.txt` is content-addressed and a new rule file is a new
+   key. The object is capped at 64 KiB. A missing, oversized, mismatched or malformed
+   file is ignored rather than failing the request — a rule file is editorial
+   convenience, not part of the index — and the non-`missing` cases are logged for
+   `wrangler tail`. The response carries `"curations": N` when rules are loaded, so a
+   deploy that forgot the file is distinguishable from one with an empty file.
 
 On the 100,000-document corpus (`--stemmer en`, `--term-chunk-bytes 64k`, 2026-10-30
 re-run in `COMPARISON.md`) a 5-hit query costs **1,013,335 bytes in 29 `Range`

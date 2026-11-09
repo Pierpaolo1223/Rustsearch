@@ -36,13 +36,20 @@
 
 import init, { Engine } from "./pkg/rustsearch_wasm.js";
 import wasm from "./pkg/rustsearch_wasm_bg.wasm";
-import { loadSparseIndex, parseFilters, searchWithSnippets } from "./shard-source.js";
+import {
+  loadCurations,
+  loadSparseIndex,
+  parseFilters,
+  searchWithSnippets,
+} from "./shard-source.js";
 import {
   SECURITY_HEADERS,
   artifactLimit,
   corsHeaders,
+  curationDigest,
   manifestDigest,
   preflightHeaders,
+  resolveKey,
 } from "./headers.js";
 
 // Text blocks stay in the engine for the isolate's lifetime, so the fetcher caps
@@ -56,10 +63,18 @@ let stateKey = "";
 // It is optional by design: a missing or malformed file leaves the ranking untouched
 // rather than taking search down, because a rule file is an editorial convenience and
 // not part of the index.
-const MAX_CURATION_BYTES = 64 * 1024;
 
 async function state(env) {
-  const key = env.INDEX_KEY || "index/manifest.txt";
+  // The pin is resolved before the key because `INDEX_KEY` may name a versioned
+  // prefix (`index/{digest}/manifest.txt`). A deploy that forgets the pin must fail
+  // closed instead of reading a key that literally contains `{digest}`.
+  const pin = manifestDigest(env);
+  const key = resolveKey(
+    env.INDEX_KEY || "index/manifest.txt",
+    pin,
+    "INDEX_KEY",
+    "MANIFEST_DIGEST",
+  );
   if (statePromise && stateKey === key) return statePromise;
   stateKey = key;
   statePromise = (async () => {
@@ -69,19 +84,30 @@ async function state(env) {
       // H1: the manifest is the routing table a cold client trusts. When the
       // deployment pins its digest, a substituted set is refused before a part is
       // parsed, even if every FNV in it was recomputed.
-      expectManifestDigest: manifestDigest(env),
+      expectManifestDigest: pin,
     });
     const engine = Engine.fromSparse(loaded.bytes);
     let curations = 0;
     if (env.CURATE_KEY) {
+      // Curation is optional policy, unlike the index: a bad pin or a missing file
+      // leaves the ranking uncurated instead of taking search down, and the status
+      // goes to the log so a deploy can see its rules are not in force.
       try {
-        const object = await env.INDEX.get(env.CURATE_KEY);
-        if (object) {
-          const text = (await object.text()).slice(0, MAX_CURATION_BYTES);
-          curations = engine.setCurations(text);
+        const curationKey = resolveKey(
+          env.CURATE_KEY,
+          curationDigest(env),
+          "CURATE_KEY",
+          "CURATE_DIGEST",
+        );
+        const rules = await loadCurations(env.INDEX, curationKey);
+        if (rules.status === "loaded") {
+          curations = engine.setCurations(rules.text);
+        } else if (rules.status !== "missing") {
+          console.warn(`curation not applied: ${rules.status}`);
         }
-      } catch {
+      } catch (error) {
         // A broken rule file must not make the endpoint unusable.
+        console.warn(`curation not applied: ${error?.message ?? error}`);
         curations = 0;
       }
     }

@@ -143,6 +143,54 @@ export function parseManifest(text) {
   return { format, total, checksum, parts };
 }
 
+/**
+ * Point every part key at the directory the manifest was read from.
+ *
+ * `rustsearch shard` names a part `<prefix><name>.bin` and writes `manifest.txt` in
+ * the same prefix, so the file name is the only part of the key that identifies an
+ * object. Re-basing on the manifest's own directory lets one shard set be published
+ * under a versioned prefix (`index/<digest>/`) without regenerating the manifest,
+ * and keeps the manifest's digest stable across that move.
+ */
+export function rebaseParts(manifest, manifestKey) {
+  const key = String(manifestKey);
+  const directory = key.slice(0, key.lastIndexOf("/") + 1);
+  for (const part of manifest.parts) {
+    const objectKey = String(part.key);
+    part.key = `${directory}${objectKey.slice(objectKey.lastIndexOf("/") + 1)}`;
+  }
+  return manifest;
+}
+
+/** A curation file is a few hundred rules; 64 KiB is generous and bounds the read. */
+export const MAX_CURATION_BYTES = 64 * 1024;
+
+/**
+ * Read the editorial rules from R2, pinned to the digest the deploy built.
+ *
+ * Returns a status instead of throwing: a missing file is a deployment without
+ * curation, and a file that does not match its pin must not reorder results, but
+ * neither is a reason to take search down. The caller logs the status and keeps the
+ * uncurated ranking. The bytes are hashed before they are decoded, so a substituted
+ * file never reaches the parser.
+ */
+export async function loadCurations(bucket, key, options = {}) {
+  const object = await bucket.get(key);
+  if (!object) return { status: "missing" };
+  const bytes = new Uint8Array(await object.arrayBuffer());
+  const maxBytes = options.maxBytes ?? MAX_CURATION_BYTES;
+  if (bytes.length > maxBytes) return { status: "too-large", bytes: bytes.length };
+  if (options.expectDigest) {
+    const pinned = String(options.expectDigest)
+      .trim()
+      .toLowerCase()
+      .replace(/^sha256:/, "");
+    const actual = await sha256Hex(bytes);
+    if (actual !== pinned) return { status: "digest-mismatch", actual };
+  }
+  return { status: "loaded", text: new TextDecoder().decode(bytes) };
+}
+
 /** FNV-1a/64 as 16 hex digits, in 32-bit lanes (no BigInt, no float error). */
 export function fnv1a64Hex(bytes) {
   let low = 0x84222325 >>> 0;
@@ -248,7 +296,7 @@ export async function loadSparseIndex(bucket, manifestKey, options = {}) {
       `manifest is ${manifestBytes.length} bytes, over the ${options.maxManifestBytes ?? MAX_MANIFEST_BYTES} byte limit`,
     );
   }
-  const manifest = parseManifest(manifestText);
+  const manifest = rebaseParts(parseManifest(manifestText), manifestKey);
   if (options.maxBytes && manifest.total > options.maxBytes) {
     throw new Error(`artifact is ${manifest.total} bytes, over the ${options.maxBytes} byte limit`);
   }

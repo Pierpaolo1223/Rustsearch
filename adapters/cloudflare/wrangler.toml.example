@@ -9,8 +9,11 @@ bucket_name = "rustsearch-index"
 
 [vars]
 # The manifest lists the parts and their hashes. Upload the shard set with
-# `rustsearch shard index.rsx -o dist/index --prefix index/`.
-INDEX_KEY = "index/manifest.txt"
+# `rustsearch shard index.rsx -o dist/index --prefix index/`, then under
+# `index/<digest>/`, where <digest> is the value in `manifest.txt.sha256`.
+# `{digest}` is replaced with MANIFEST_DIGEST, so a rebuild publishes new keys
+# instead of overwriting the objects a cached manifest still names.
+INDEX_KEY = "index/{digest}/manifest.txt"
 
 # Pin the manifest this deploy built: `rustsearch shard` writes the value to
 # `manifest.txt.sha256` (sha256:<64 hex>). With it set, the Worker refuses a
@@ -18,3 +21,10 @@ INDEX_KEY = "index/manifest.txt"
 # objects and recomputing their FNV hashes is not enough to change the answers.
 # A malformed value fails the query closed (503) instead of running unpinned.
 # MANIFEST_DIGEST = "sha256:9f2c…"
+
+# Optional editorial rules, published by their own content hash (`sha256sum
+# curate.txt`): `{digest}` resolves against CURATE_DIGEST, not MANIFEST_DIGEST. A file
+# that does not match is ignored and the ranking stays uncurated; the reason goes to
+# `wrangler tail`.
+# CURATE_KEY = "curate/{digest}.txt"
+# CURATE_DIGEST = "sha256:…"

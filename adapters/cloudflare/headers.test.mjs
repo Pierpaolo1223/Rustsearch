@@ -9,8 +9,10 @@ import {
   allowedOrigins,
   artifactLimit,
   corsHeaders,
+  curationDigest,
   manifestDigest,
   preflightHeaders,
+  resolveKey,
 } from "./headers.js";
 import { loadSparseIndex } from "./shard-source.js";
 
@@ -81,6 +83,33 @@ test("the manifest digest is normalized, and a malformed pin fails closed", () =
   // A typo must not degrade to "unpinned": it must be impossible to run.
   assert.throws(() => manifestDigest({ MANIFEST_DIGEST: "sha256:abc" }), /64 hex/);
   assert.throws(() => manifestDigest({ MANIFEST_DIGEST: "sha512:" + hex }), /64 hex/);
+});
+
+test("the curation digest is normalized like the manifest's", () => {
+  const hex = "ab12".repeat(16);
+  assert.equal(curationDigest({}), undefined);
+  assert.equal(curationDigest({ CURATE_DIGEST: "   " }), undefined);
+  assert.equal(curationDigest({ CURATE_DIGEST: `sha256:${hex.toUpperCase()}` }), hex);
+  assert.equal(curationDigest({ CURATE_DIGEST: hex }), hex);
+  assert.throws(() => curationDigest({ CURATE_DIGEST: "nope" }), /CURATE_DIGEST must be 64 hex/);
+});
+
+test("a versioned prefix resolves {digest} against the pin it names", () => {
+  const hex = "9f2c".repeat(16);
+  assert.equal(resolveKey("index/{digest}/manifest.txt", hex), `index/${hex}/manifest.txt`);
+  // A key without the placeholder is returned untouched, pin or not.
+  assert.equal(resolveKey("index/manifest.txt", hex), "index/manifest.txt");
+  assert.equal(resolveKey("index/manifest.txt", undefined), "index/manifest.txt");
+  assert.equal(resolveKey(undefined, undefined), "");
+  // A template that needs a digest must never be read literally.
+  assert.throws(
+    () => resolveKey("index/{digest}/manifest.txt", undefined),
+    /INDEX_KEY uses \{digest\}, so MANIFEST_DIGEST must be set/,
+  );
+  assert.throws(
+    () => resolveKey("index/{digest}.txt", undefined, "CURATE_KEY", "CURATE_DIGEST"),
+    /CURATE_KEY uses \{digest\}, so CURATE_DIGEST must be set/,
+  );
 });
 
 test("a manifest over the artifact budget is refused before any part is fetched", async () => {

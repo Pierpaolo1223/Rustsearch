@@ -27,22 +27,60 @@ export const ALLOWED_METHODS = "GET, HEAD, OPTIONS";
 export const DEFAULT_MAX_ARTIFACT_BYTES = 256 * 1024 * 1024;
 
 /**
- * The SHA-256 the deploy pinned for the manifest, from `MANIFEST_DIGEST`.
+ * One pinned SHA-256 from the environment, or `undefined` when it is unset.
  *
- * `rustsearch shard` writes it to `manifest.txt.sha256` as `sha256:<hex>`, so the
- * prefix is accepted and stripped. Unset returns `undefined`: the per-part FNV
- * hashes still run, they are just not authentication. A malformed value throws,
- * so a typo in the deploy fails the query closed (503) instead of silently
- * running unpinned against a substituted manifest.
+ * `rustsearch shard` writes `sha256:<hex>` sidecars, so the prefix is accepted and
+ * stripped. A malformed value throws: a typo must not degrade to "unpinned".
  */
-export function manifestDigest(env) {
-  const configured = String(env?.MANIFEST_DIGEST ?? "").trim();
+function pinnedDigest(env, variable) {
+  const configured = String(env?.[variable] ?? "").trim();
   if (!configured) return undefined;
   const normalized = configured.toLowerCase().replace(/^sha256:/, "");
   if (!/^[0-9a-f]{64}$/.test(normalized)) {
-    throw new Error("MANIFEST_DIGEST must be 64 hex digits, optionally prefixed with sha256:");
+    throw new Error(`${variable} must be 64 hex digits, optionally prefixed with sha256:`);
   }
   return normalized;
+}
+
+/**
+ * The SHA-256 the deploy pinned for the manifest, from `MANIFEST_DIGEST`.
+ *
+ * Unset returns `undefined`: the per-part FNV hashes still run, they are just not
+ * authentication. A malformed value throws, so a typo in the deploy fails the query
+ * closed (503) instead of silently running unpinned against a substituted manifest.
+ */
+export function manifestDigest(env) {
+  return pinnedDigest(env, "MANIFEST_DIGEST");
+}
+
+/**
+ * The SHA-256 the deploy pinned for the curation file, from `CURATE_DIGEST`.
+ *
+ * Curation reorders hits, so a substituted rule file is a ranking change even when
+ * the artifact is intact. The hash is checked before the file is decoded; a mismatch
+ * leaves the ranking uncurated rather than failing the query, because rules are
+ * optional policy and not part of the index.
+ */
+export function curationDigest(env) {
+  return pinnedDigest(env, "CURATE_DIGEST");
+}
+
+/**
+ * Resolve `{digest}` in an object key, so a set can live under a versioned prefix.
+ *
+ * `INDEX_KEY = "index/{digest}/manifest.txt"` reads the set the deploy built from
+ * `index/<manifest digest>/`, which is what makes immutable caching safe: a rebuild
+ * writes new keys instead of overwriting the ones a cached manifest still names.
+ * A template that needs a digest the deploy did not set throws, so the Worker cannot
+ * read a literal `{digest}` key and serve nothing.
+ */
+export function resolveKey(template, digest, variable = "INDEX_KEY", digestVariable = "MANIFEST_DIGEST") {
+  const key = String(template ?? "").trim();
+  if (!key.includes("{digest}")) return key;
+  if (!digest) {
+    throw new Error(`${variable} uses {digest}, so ${digestVariable} must be set`);
+  }
+  return key.split("{digest}").join(digest);
 }
 
 /** The artifact ceiling for this deployment, from `MAX_ARTIFACT_BYTES`. */
