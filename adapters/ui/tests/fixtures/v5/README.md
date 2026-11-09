@@ -29,11 +29,11 @@ for (let page = 0; page < 30; page += 1) {
 }
 EOF
 
-rustsearch/target/release/rustsearch build /tmp/e2e-site \
-  -o searchui/tests/fixtures/v5/index.rsx --stemmer en \
+target/release/rustsearch build /tmp/e2e-site \
+  -o adapters/ui/tests/fixtures/v5/index.rsx --stemmer en \
   --term-chunk-bytes 1024 --base-url /site
-rustsearch/target/release/rustsearch shard searchui/tests/fixtures/v5/index.rsx \
-  -o searchui/tests/fixtures/v5/shards --prefix index/
+target/release/rustsearch shard adapters/ui/tests/fixtures/v5/index.rsx \
+  -o adapters/ui/tests/fixtures/v5/shards --prefix index/
 ```
 
 The artifact is immutable, so the test needs only the two directories above.

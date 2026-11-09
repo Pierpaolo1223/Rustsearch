@@ -1,12 +1,12 @@
 # rustsearch playground
 
-A static page for trying [`rustsearch`](../rustsearch) in a browser: type a query,
+A static page for trying [`rustsearch`](../../README.md) in a browser: type a query,
 see BM25F hits, snippets with highlights, facet filters, typo tolerance, title
 boost and page grouping. No server-side search, no framework, no build step for
 the UI itself — the engine runs as WASM against a format-v5 shard set by default,
 or against one whole `.rsx` artifact (`?index=`).
 
-This directory is deliberately outside `rustsearch/`: the engine and its tests do
+This directory is deliberately a leaf of the workspace: the engine and its tests do
 not depend on the UI, and the UI does not change the artifact format. It is a
 consumer of the public boundary (`searchJsonWithOptions`, `facetsJson`, the
 statistics getters), which is exactly the surface a future `<rustsearch-search>`
@@ -14,10 +14,10 @@ component would wrap.
 
 ## Starting the UI
 
-Run these commands from the repository's `searchui/` directory:
+Run these commands from the repository root:
 
 ```sh
-cd searchui
+cd adapters/ui
 ./setup.sh          # first run, and after engine changes
 ./serve.sh          # http://127.0.0.1:8765/
 ```
@@ -49,14 +49,16 @@ index…** and select `demo/index.rsx`.
 | path | what |
 |---|---|
 | `vendor/pkg-web/` | `wasm-bindgen --target web` output, loaded by `core/engine.worker.js` |
-| `demo/site/` | ~9,350 HTML pages: 9,342 generated from the repository plus 8 curated pages |
+| `demo/site/` | one HTML page per Markdown section in the repository, plus the 8 curated pages |
 | `demo/index.rsx` | format v5, `--stemmer en`, facets, `--max-page-chars 2117`, `--term-chunk-bytes 64k`; **~10,000 documents**, 25 chunks |
 | `demo/shards/` | `demo/index.rsx` published by `rustsearch shard` (manifest, `meta`, `docrecords`, one object per chunk, `strings`, `texts`); what the page loads |
 
-The demo targets 10,000 indexed documents. `SEARCHUI_DOCS` caps the total number
-of demo pages (repository plus curated, default 9350),
+The demo size follows the Markdown under `SEARCHUI_CORPUS_ROOT` (the workspace by
+default). `SEARCHUI_DOCS` caps the total
+number of demo pages (repository plus curated, default 9350),
 `SEARCHUI_MAX_PAGE_CHARS` controls page splitting (default 2117), and
-`SEARCHUI_TARGET_DOCS` asks setup to hit a document count directly.
+`SEARCHUI_TARGET_DOCS` asks setup to hit a document count directly; it needs a
+corpus large enough to reach it.
 
 ### Choosing the demo size
 
@@ -64,31 +66,39 @@ The number in the footer is the number of **documents in the index**, not the
 number of HTML pages. The direct way to choose it is:
 
 ```sh
-cd searchui
+cd adapters/ui
 SEARCHUI_TARGET_DOCS=5000 ./setup.sh
 ./serve.sh
 ```
 
-The curated pages are included in the count. On the current tree this produces
-exactly 5,000 documents; `SEARCHUI_TARGET_DOCS=10000 ./setup.sh` produces the
-default 10,000. When the target is below the number of available pages, setup
-keeps enough pages and disables splitting; above it, setup searches for the
-split threshold that lands exactly on the target. If no threshold can hit the
-number exactly, setup exits with an error instead of silently rounding.
+The curated pages are included in the count. When the target is below the number of
+available pages, setup keeps enough pages and disables splitting; above it, setup
+searches for the split threshold that lands exactly on the target. If no threshold
+can hit the number exactly, setup exits with an error instead of silently rounding.
 
 For finer control, the two underlying variables are:
 
 | variable | default | effect |
 |---|---|---|
+| `SEARCHUI_CORPUS_ROOT` | the workspace | directory whose Markdown is rendered into the demo corpus |
 | `SEARCHUI_TARGET_DOCS` | unset | exact number of documents to aim for; chooses the page cap or split threshold |
 | `SEARCHUI_DOCS` | `9350` | maximum total HTML pages in the demo, curated included |
 | `SEARCHUI_MAX_PAGE_CHARS` | `2117` | pages longer than this are split into several documents; `0` disables splitting |
 
+To reproduce the 10,000-document demo, point the corpus at the larger parent
+workspace (it holds more Markdown than this repository):
+
+```sh
+cd adapters/ui
+SEARCHUI_CORPUS_ROOT="$PWD/../../.." ./setup.sh
+```
+
 With `SEARCHUI_MAX_PAGE_CHARS=0`, all hits have `matches: 1` and **Group by page**
-has nothing to collapse. The default is 10,000 documents: 9,350 pages plus 650
-split documents. Because the count depends on the source pages, run
+has nothing to collapse. Because the count depends on the source pages, run
 `rustsearch info demo/index.rsx` after changing them and use
-`SEARCHUI_TARGET_DOCS` if you need an exact number.
+`SEARCHUI_TARGET_DOCS` if you need an exact number. The 10,000-document demo in
+`COMPARISON.md` was built from the larger parent workspace, not from this repository
+alone.
 
 The corpus intentionally has a clickable URL per hit (`--base-url demo/site`), so a
 result opens the page it was built from.
@@ -102,7 +112,7 @@ writes a new `demo/index.rsx` and re-publishes `demo/shards/`. The UI itself has
 no build step.
 
 ```sh
-cd searchui
+cd adapters/ui
 ./setup.sh
 ./serve.sh
 ```
@@ -112,18 +122,18 @@ the files directly from disk. Changes to `index.html`, `app.js`, `styles.css` or
 `core/` need only a reload, not `./setup.sh`. Check the rebuilt artifact with:
 
 ```sh
-../rustsearch/target/release/rustsearch info demo/index.rsx
+../../target/release/rustsearch info demo/index.rsx
 ```
 
 ## Loading another index
 
 The demo is one `.rsx` artifact, published as a shard set. Build another one from
-any directory of HTML pages, from `searchui/`:
+any directory of HTML pages, from `adapters/ui/`:
 
 ```sh
-cd searchui
-cargo build --manifest-path ../rustsearch/Cargo.toml --release -p rustsearch-cli
-../rustsearch/target/release/rustsearch build /path/to/site -o my-site.rsx \
+cd adapters/ui
+cargo build --release -p rustsearch-cli
+../../target/release/rustsearch build /path/to/site -o my-site.rsx \
   --base-url https://example.com --stemmer en
 ```
 
@@ -135,7 +145,7 @@ Then load the artifact in either way:
 
 1. **Local file** — click **Load index…** and select the `.rsx`. The page reads it
    with `File.arrayBuffer()` in the browser; the file is not uploaded.
-2. **URL** — put the artifact under `searchui/` and open
+2. **URL** — put the artifact under `adapters/ui/` and open
    `http://127.0.0.1:8765/?index=my-site.rsx`. A remote URL also works if it is
    CORS-readable and served over `https:`. The page CSP permits `https:` for this
    fetch.
@@ -151,8 +161,8 @@ The page loads a **shard set** by default, so it fetches only what a query needs
 (`DESIGN.md` §7 of the engine docs), and `setup.sh` already runs it:
 
 ```sh
-cd searchui
-../rustsearch/target/release/rustsearch shard demo/index.rsx \
+cd adapters/ui
+../../target/release/rustsearch shard demo/index.rsx \
   -o demo/shards --prefix index/
 ```
 
@@ -171,14 +181,14 @@ searches to the same engine; what changes is the traffic:
    one `Range` request per hit into `strings.bin` and `texts.bin` (the 8.5 MiB the
    page never downloads whole).
 
-On the generated demo a cold five-hit query reads **619 KiB in 15 requests** against
+On the 10,000-document demo a cold five-hit query reads **619 KiB in 15 requests** against
 10.7 MiB for the whole artifact, with the same hits. `--meta-part-bytes N` publishes
 a metadata run too large for one object as `meta00000`, … and the client reads every
 slice. To measure the set against the artifact loaded whole, with the real client and
 engine:
 
 ```sh
-cd searchui
+cd adapters/ui
 node tools/bench-shards.mjs --flat demo/index.rsx \
   --shards demo/shards --label 10k
 # cold-start wall clock over HTTP, with a modelled 20 ms RTT per response:
@@ -193,13 +203,13 @@ This needs a server that honours `Range`: `./serve.sh` runs `serve.py`, which an
 `206` with `Content-Range`. A host that ignores the header still works — the client
 slices the body itself — but then the transfer is the whole object, and the byte
 counter says so. The client is the browser port of
-`rustsearch/adapters/cloudflare/shard-source.js`: same manifest, same FNV-1a/64 part
+`adapters/cloudflare/shard-source.js`: same manifest, same FNV-1a/64 part
 hashes, same order of operations, verified in `tests/shards.test.mjs`.
 
 ### From a folder of Markdown
 
-`rustsearch build` indexes HTML. The repository ships
-`rustsearch/tools/make-corpus.mjs`, the converter `setup.sh` uses for its demo:
+`rustsearch build` indexes HTML. The repository ships `tools/make-corpus.mjs`, the
+converter `setup.sh` uses for its demo:
 it reads every `.md` under the roots, splits each file at headings, and writes one
 HTML page per section.
 
@@ -210,17 +220,17 @@ CLI and the WASM module:
 REPO=$PWD
 NOTES="$HOME/notes"
 
-# 1. Markdown -> HTML under searchui/demo/md-site/
-(cd "$NOTES" && node "$REPO/rustsearch/tools/make-corpus.mjs" \
-  "$REPO/searchui/demo/md-site" --roots . --chunk 850 --facets)
+# 1. Markdown -> HTML under adapters/ui/demo/md-site/
+(cd "$NOTES" && node "$REPO/tools/make-corpus.mjs" \
+  "$REPO/adapters/ui/demo/md-site" --roots . --chunk 850 --facets)
 
 # 2. HTML -> one .rsx artifact
-cd "$REPO/searchui"
-../rustsearch/target/release/rustsearch build demo/md-site \
+cd "$REPO/adapters/ui"
+../../target/release/rustsearch build demo/md-site \
   -o demo/md.rsx --base-url demo/md-site --stemmer en
 
 # 3. Check it and load it
-../rustsearch/target/release/rustsearch info demo/md.rsx
+../../target/release/rustsearch info demo/md.rsx
 ```
 
 The example uses `--stemmer en`; use `--stemmer it` for Italian notes, or `none`
@@ -304,7 +314,7 @@ BM25F ranking. The rules are fetched once per index load, not per keystroke, and
 ## Layout
 
 ```
-searchui/
+adapters/ui/
 ├── index.html        page shell; CSP, landmarks, forms and native controls
 ├── styles.css        design tokens (light/dark), layout, states
 ├── core/search.js    headless API: openIndex / openSharded -> SearchSession.search() (async)
@@ -360,14 +370,14 @@ labels and declared language.
   instead. A **grouped** query on a chunked shard set reads all record pages before
   ranking, because page identity lives in the record and grouping runs before
   `limit` — the one query shape whose metadata cost is the whole record table.
-* Typo tolerance is still opt-in (ROADMAP §F8), and "did you mean" is not in the
+* Typo tolerance is still opt-in, and "did you mean" is not in the
   JSON yet, so the empty state offers a retry instead of a correction.
 * A query already running in the worker cannot be interrupted — the WASM call is
   synchronous there. A newer keystroke replaces the one *waiting*, and the answer
   to a superseded query is discarded, so the UI never shows stale results; hard
   cancellation would mean terminating the worker and reloading the artifact.
 * The demo corpus is English prose generated from this repository's docs; the
-  page declares `lang="en"` and ships English strings only. F10's i18n dictionary
-  is not implemented.
+  page declares `lang="en"` and ships English strings only. An i18n dictionary is
+  not implemented.
 * No highlighting outside the 320-byte snippet: the engine has no
-  `highlight(docId, query)` yet (ROADMAP §F4).
+  `highlight(docId, query)` yet.

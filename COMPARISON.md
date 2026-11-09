@@ -20,7 +20,7 @@ memory ceilings stop being details.
 The corpus is this repository's own documentation, not synthetic text: every
 markdown page under the domain corpora (`*/pages/`, the design documents, the eval
 notes) — 1,136 files — split into 10,000 documents of at most ~850 characters at
-paragraph boundaries. The `rustsearch/` and `searchui/` trees are excluded, so
+paragraph boundaries. The engine's own tree and `adapters/ui/` are excluded, so
 writing this file does not change the corpus. Each page also carries
 `<html lang="en">` and a `<meta name="section">` naming the tree it came from
 (`data`, `crewAI`, `zbsearch`, …), which is what the filter section below measures.

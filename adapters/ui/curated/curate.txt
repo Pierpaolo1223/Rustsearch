@@ -1,4 +1,4 @@
-# searchui demo curation — open the page with
+# adapters/ui demo curation — open the page with
 #
 #   http://127.0.0.1:8765/?curate=curated/curate.txt
 #

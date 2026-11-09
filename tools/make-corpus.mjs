@@ -51,10 +51,10 @@ function markdownFiles(dir, files = []) {
       entry.name.startsWith(".") ||
       entry.name === "node_modules" ||
       entry.name === "target" ||
-      // The engine's and the UI's own docs change every time they are documented;
-      // keep the corpus stable by indexing everything except those trees.
-      entry.name === "rustsearch" ||
-      entry.name === "searchui"
+      // Generated trees never feed the corpus: the demo would otherwise index the
+      // pages it just wrote on the next rebuild.
+      entry.name === "vendor" ||
+      entry.name === "demo"
     ) {
       continue;
     }

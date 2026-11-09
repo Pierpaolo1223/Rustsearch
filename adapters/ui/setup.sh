@@ -15,19 +15,22 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# The playground used to live next to `rustsearch/` (as `searchui/`); it now lives inside
-# it, as `rustsearch/adapters/ui/`. Walk up to the workspace instead of assuming a depth,
-# so the script works from either layout.
+# The UI lives inside the workspace it documents, as `adapters/ui/`. Walk up to the
+# crate root instead of assuming a depth, and check for a member crate so a stray
+# `Cargo.toml` on the way up is not mistaken for it.
 ROOT="$HERE"
-while [ "$ROOT" != "/" ] && [ ! -f "$ROOT/rustsearch/Cargo.toml" ]; do
+while [ "$ROOT" != "/" ] && [ ! -f "$ROOT/Cargo.toml" ]; do
     ROOT="$(dirname "$ROOT")"
 done
-if [ ! -f "$ROOT/rustsearch/Cargo.toml" ]; then
-    echo "cannot find rustsearch/Cargo.toml above $HERE" >&2
+if [ ! -f "$ROOT/Cargo.toml" ] || [ ! -d "$ROOT/core" ]; then
+    echo "cannot find the rustsearch workspace above $HERE" >&2
     exit 1
 fi
-RUSTSEARCH="$ROOT/rustsearch"
+RUSTSEARCH="$ROOT"
 CURATED_DIR="$HERE/curated"
+# The demo indexes the Markdown under this root. It defaults to the workspace; point
+# it at a larger docs tree (the parent project, say) to reproduce the 10k demo.
+CORPUS_ROOT="${SEARCHUI_CORPUS_ROOT:-$ROOT}"
 
 DOCS="${SEARCHUI_DOCS:-9350}"
 MAX_PAGE_CHARS="${SEARCHUI_MAX_PAGE_CHARS:-2117}"
@@ -71,11 +74,15 @@ cargo build --release -p rustsearch-cli
 
 generate() { # $1 = repository page target
     echo "==> generating up to $1 repository pages"
-    # Run from the repository root: the generator indexes every Markdown tree and
-    # deliberately skips rustsearch/ and searchui/ so their own docs do not churn
-    # the corpus.
-    cd "$ROOT"
-    node rustsearch/tools/make-corpus.mjs "$HERE/demo/site" \
+    # Start from an empty site: a previous run may have been built from another
+    # corpus root, and stale pages would silently join the index.
+    rm -rf "$HERE/demo/site"
+    mkdir -p "$HERE/demo/site"
+    # Run from the workspace root: the generator indexes every Markdown tree and
+    # skips the generated ones (`target/`, `vendor/`, `demo/`) so a rebuild of the
+    # demo does not feed itself.
+    cd "$CORPUS_ROOT"
+    node "$ROOT/tools/make-corpus.mjs" "$HERE/demo/site" \
         --target "$1" --chunk 850 --facets
     if [ "$CURATED_PAGES" -gt 0 ]; then
         echo "==> adding $CURATED_PAGES curated demo pages"
@@ -85,7 +92,7 @@ generate() { # $1 = repository page target
 
 build_index() { # $1 = max-page-chars, $2 = output artifact
     # --base-url demo/site makes every hit's URL open the generated page when the
-    # UI is served from searchui/ (demo/site/doc-00042.html). The 64 KiB term
+    # UI is served from adapters/ui/ (demo/site/doc-00042.html). The 64 KiB term
     # chunks make this a format-v5 artifact; setup publishes it as a shard set
     # below, which is what the page loads by default.
     "$RUSTSEARCH/target/release/rustsearch" build "$HERE/demo/site" \
