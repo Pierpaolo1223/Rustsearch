@@ -87,3 +87,8 @@ lcov.info
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Private review notes: kept on disk, never committed.
+/SKILLS.md
+/PRODUCT_REVIEW.md
+/ROADMAP.md
