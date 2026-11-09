@@ -1,0 +1,15 @@
+[package]
+name = "rustsearch-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Format reader, BM25 scorer and tokenizer for rustsearch"
+
+[features]
+default = []
+std = []
+
+[dependencies]
+libm = "0.2"
+lz4_flex = { version = "0.14", default-features = false, features = ["alloc", "safe-decode", "checked-decode"] }

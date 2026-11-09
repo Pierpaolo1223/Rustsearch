@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="section" content="reference">
+  <title>Static search and untrusted text</title>
+</head>
+<body>
+  <main>
+    <p><a href="../index.html">Back to search</a></p>
+    <h1>Static search and untrusted text</h1>
+    <p>A static index removes a whole class of server-side risk. There is no search endpoint to rate-limit, no query parser exposed to the network, and no server process that can be made to allocate an unexpected reply.</p>
+
+    <h2>Text is inserted, never parsed</h2>
+    <p>Titles, URLs, snippets and facet values are inserted with DOM text nodes. Highlight ranges are validated before they become markup, and a URL that is not a safe relative or http(s) link is shown as text.</p>
+
+    <h2>The artifact is data</h2>
+    <p>The <code>.rsx</code> file is read-only input. A corrupted artifact fails to load with an error instead of executing, because the loader validates the header, counts and version before serving a hit.</p>
+
+    <h2>Deployment is a static host</h2>
+    <p>Because the browser does the work, the origin only serves bytes. A CDN or object store is enough, and the same artifact can be published to several origins without a database to keep in sync.</p>
+  </main>
+</body>
+</html>

@@ -1,0 +1,14 @@
+[package]
+name = "rustsearch-index"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Static-site crawler and index builder for rustsearch"
+
+[dependencies]
+rustsearch-core = { workspace = true, features = ["std"] }
+lz4_flex = "0.14"
+scraper = "0.29"
+ego-tree = "0.11"
+walkdir = "2.5"

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="section" content="guide">
+  <title>Facets and filters</title>
+</head>
+<body>
+  <main>
+    <p><a href="../index.html">Back to search</a></p>
+    <h1>Facets and filters</h1>
+    <p>A facet is a taxonomy the build records, not something the browser guesses. The demo indexes <code>section</code> and <code>lang</code>; the counts next to each value come from the artifact and update with the current query.</p>
+
+    <h2>AND across fields, OR inside one</h2>
+    <p>Selecting <code>section=guide</code> and <code>section=reference</code> returns pages from either section. Adding <code>lang=en</code> keeps only documents that satisfy both fields. Filters are resolved before ranking, so a filtered result list is still the top hits for the query.</p>
+
+    <h2>Why filters matter</h2>
+    <p>A user who knows the answer lives in <em>operations</em> should not have to read twenty hits from <em>benchmarks</em>. The facet counts also show when a filter would empty the result set, which is cheaper than running the search and discovering it later.</p>
+
+    <h2>What is not a facet</h2>
+    <p>Free text, snippets and ranking scores are per query. A facet must be stable across queries, or the counts would change with every keystroke.</p>
+  </main>
+</body>
+</html>

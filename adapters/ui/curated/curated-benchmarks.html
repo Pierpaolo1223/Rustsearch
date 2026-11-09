@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="section" content="benchmarks">
+  <title>What 10,000 documents means</title>
+</head>
+<body>
+  <main>
+    <p><a href="../index.html">Back to search</a></p>
+    <h1>What 10,000 documents means</h1>
+    <p>This demo holds 10,000 indexed documents: 9,344 generated pages plus 656 split sections. The number in the footer is the document count, not the count of HTML files.</p>
+
+    <h2>Artifact, not a database</h2>
+    <p>The artifact on the wire is about 11 MB. It contains the dictionary, postings, document records and text needed for snippets. The browser loads it once; queries read it locally.</p>
+
+    <h2>What the build spends</h2>
+    <p>The build reads and analyzes every page before it writes anything. The result is immutable, so the expensive work happens at deploy time and never on a user's query.</p>
+
+    <h2>What to measure next</h2>
+    <p>Cold start is the cost of fetching and instantiating the WASM module; warm queries are the engine plus JSON. A serious demo should report both, on the same machine and the same corpus, instead of a single unlabeled number.</p>
+  </main>
+</body>
+</html>

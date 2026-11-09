@@ -1,0 +1,53 @@
+[package]
+name = "rustsearch-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+# Its own workspace on purpose: `cargo fuzz` instruments the targets with
+# sanitizers, and that build must not become the workspace's default profile.
+[workspace]
+members = ["."]
+
+[dependencies]
+libfuzzer-sys = "0.4"
+rustsearch-core = { path = "../core", features = ["std"] }
+rustsearch-index = { path = "../indexer" }
+
+[[bin]]
+name = "from_bytes"
+path = "fuzz_targets/from_bytes.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "attach"
+path = "fuzz_targets/attach.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "filters"
+path = "fuzz_targets/filters.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "extract"
+path = "fuzz_targets/extract.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "from_sparse"
+path = "fuzz_targets/from_sparse.rs"
+test = false
+doc = false
+bench = false

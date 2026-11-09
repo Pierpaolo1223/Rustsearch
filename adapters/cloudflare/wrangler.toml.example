@@ -1,0 +1,20 @@
+name = "rustsearch"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+# The index lives in R2 and is read-only for the Worker.
+[[r2_buckets]]
+binding = "INDEX"
+bucket_name = "rustsearch-index"
+
+[vars]
+# The manifest lists the parts and their hashes. Upload the shard set with
+# `rustsearch shard index.rsx -o dist/index --prefix index/`.
+INDEX_KEY = "index/manifest.txt"
+
+# Pin the manifest this deploy built: `rustsearch shard` writes the value to
+# `manifest.txt.sha256` (sha256:<64 hex>). With it set, the Worker refuses a
+# manifest that does not match before parsing a single part, so rewriting the
+# objects and recomputing their FNV hashes is not enough to change the answers.
+# A malformed value fails the query closed (503) instead of running unpinned.
+# MANIFEST_DIGEST = "sha256:9f2c…"

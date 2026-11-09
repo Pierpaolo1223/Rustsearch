@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head><title>Query the index</title></head>
+<body>
+  <main>
+    <h1>Query</h1>
+    <p>Tokenization is Unicode-aware and case-insensitive. A query is ranked with
+    BM25, and a prefix of two or more characters expands to dictionary terms.</p>
+    <p>Fuzzy matching is opt-in: it scans the dictionary once and caps the number
+    of expansions.</p>
+    <p>Snippets are plain text. The renderer escapes them and wraps the returned
+    byte ranges in its own mark element.</p>
+  </main>
+</body>
+</html>

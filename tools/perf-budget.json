@@ -1,0 +1,27 @@
+{
+  "measured": "2026-11-09",
+  "command": "rustsearch bench --docs 2000 --words 120 --queries 200",
+  "corpus": {
+    "docs": 2000,
+    "words": 120,
+    "queries": 200
+  },
+  "wasm": {
+    "path": "wasm/pkg-node/rustsearch_wasm_bg.wasm",
+    "raw_bytes": 292987,
+    "gzip_bytes": 123957,
+    "gzip_tool": "node:zlib gzipSync(level 9); `gzip -9` reports 121092 B for the same module",
+    "max_raw_bytes": 298000,
+    "max_gzip_bytes": 128000
+  },
+  "native": {
+    "p50_ms": 0.058,
+    "p95_ms": 0.105,
+    "max_p50_ms": 0.15,
+    "max_p95_ms": 0.3
+  },
+  "artifact": {
+    "index_bytes": 1804012,
+    "max_index_bytes": 1860000
+  }
+}

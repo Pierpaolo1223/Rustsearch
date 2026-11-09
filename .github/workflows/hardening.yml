@@ -1,0 +1,172 @@
+# H5 + H6: the CI gate the hardening backlog asked for.
+#
+# Every job runs on the pinned toolchain in `rust-toolchain.toml` and with
+# `--locked`, so a PR cannot pass on a dependency set that is not in `Cargo.lock`.
+# The jobs are separate so a failure names the gate: format, lints, tests,
+# advisories/licences, SBOM, reproducibility, fuzz smoke, size/latency budgets.
+#
+# This repository root **is** `rustsearch/`: the workflow, `Cargo.toml` and
+# `target/` are siblings. Do not prefix paths with `rustsearch/` here — that
+# filter never matches and every `run` would start in a directory that does not
+# exist.
+name: hardening
+
+on:
+  push:
+  pull_request:
+  schedule:
+    # An advisory can land against a dependency of a release that is not changing.
+    - cron: "0 6 * * 1"
+
+concurrency:
+  group: hardening-${{ github.ref }}
+  cancel-in-progress: true
+
+# The workflow reads the repository; nothing here pushes, publishes or signs.
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show
+      - uses: Swatinem/rust-cache@v2
+      - name: format
+        run: cargo fmt --all -- --check
+      - name: clippy
+        # `-D warnings` is what makes the forbid/deny attributes in the crates a
+        # gate instead of a suggestion.
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: test
+        run: cargo test --workspace --locked
+      - name: wasm
+        run: cargo check -p rustsearch-wasm --locked
+        # The engine's own wasm-build check needs the target installed; the host
+        # check above still compiles the crate and its bindings.
+      - name: adapters
+        run: |
+          node --test adapters/cloudflare/shard-source.test.mjs
+          node --test adapters/cloudflare/headers.test.mjs
+          node --test adapters/ui/tests/format.test.mjs
+          node --test adapters/ui/tests/shards.test.mjs
+          node --test adapters/ui/tests/session.test.mjs
+          node --test adapters/ui/tests/curation.test.mjs
+
+  ranking:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show
+      - uses: Swatinem/rust-cache@v2
+      - name: build the CLI
+        run: cargo build --release --locked -p rustsearch-cli
+      - name: ranking regression gate
+        # 21 judged queries on a deterministic fixture; fails on a drop in nDCG/MRR,
+        # on a must-be-top-3 miss, on a forbidden document or on a missing correction.
+        run: node tools/ranking-gate.mjs
+      - name: the gate must fail on a broken title boost
+        # A gate that cannot be made to fail is a gate that proves nothing. With title
+        # weighting off, the page whose only match is its title disappears, so this
+        # step passing would mean the check is not reading the ranking.
+        run: |
+          if node tools/ranking-gate.mjs --quiet --title-boost 0; then
+            echo "the gate passed with titles ignored: it cannot catch a ranking regression"
+            exit 1
+          fi
+      - name: incremental build equals a full build
+        run: cargo test -p rustsearch-index --locked --test incremental
+
+  perf:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show
+      - run: rustup target add wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - name: build the CLI
+        run: cargo build --release --locked -p rustsearch-cli
+      - name: build the wasm module
+        run: cargo build --release --locked -p rustsearch-wasm --target wasm32-unknown-unknown
+      # The version must match the `wasm-bindgen` crate in Cargo.lock; the gate
+      # measures the module a browser actually downloads.
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen@0.2.129
+      - name: bindgen output
+        run: wasm-bindgen --target nodejs --out-dir wasm/pkg-node target/wasm32-unknown-unknown/release/rustsearch_wasm.wasm
+      - name: size and latency budgets
+        run: node tools/perf-gate.mjs
+      - name: the gate must fail on an impossible budget
+        run: |
+          if node tools/perf-gate.mjs --quiet --max-p95-ms 0.0001; then
+            echo "the perf gate passed with an impossible latency budget: it cannot catch a regression"
+            exit 1
+          fi
+          if node tools/perf-gate.mjs --quiet --max-gzip 1; then
+            echo "the perf gate passed with an impossible size budget: it cannot catch a regression"
+            exit 1
+          fi
+
+  supply-chain:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show
+      - run: cargo install cargo-audit cargo-deny --locked
+      - name: advisories
+        # A vulnerability fails; an unmaintained crate warns (see deny.toml).
+        run: cargo audit --deny warnings
+      - name: licences, bans, sources
+        run: cargo deny check
+      - name: sbom
+        run: |
+          cargo install cargo-cyclonedx --locked
+          cargo cyclonedx --format json --output sbom
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rustsearch-sbom
+          path: sbom/*.cdx.json
+          if-no-files-found: error
+
+  reproducible:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show
+      - name: build twice and compare
+        run: |
+          set -euo pipefail
+          export SOURCE_DATE_EPOCH=1700000000
+          export RUSTFLAGS="--remap-path-prefix=$PWD=/rustsearch"
+          cargo build --release --locked -p rustsearch-cli
+          sha256sum target/release/rustsearch > first.sha256
+          cargo clean -p rustsearch-cli
+          cargo build --release --locked -p rustsearch-cli
+          sha256sum target/release/rustsearch > second.sha256
+          diff -u first.sha256 second.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rustsearch-cli-sha256
+          path: first.sha256
+
+  fuzz-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install nightly --profile minimal
+      - run: cargo install cargo-fuzz --locked
+      - name: 2,000 executions per target
+        working-directory: fuzz
+        run: |
+          set -euo pipefail
+          for target in from_bytes attach filters extract from_sparse; do
+            cargo +nightly fuzz run "$target" -- -runs=2000
+          done

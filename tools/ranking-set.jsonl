@@ -1,0 +1,21 @@
+{"id":"shard","query":"shard","grades":{"shard-layout":2,"shard-routing":2,"long-page":1},"must_top3":["shard-layout","shard-routing"],"why":"both pages are about the shard; the long page only mentions it"}
+{"id":"shard-layout","query":"shard layout","grades":{"shard-layout":2},"must_top3":["shard-layout"],"why":"both terms in the title of one page"}
+{"id":"static","query":"static","grades":{"static-site":2,"static-apart":1},"must_top3":["static-site"],"why":"the page whose title is about a static site"}
+{"id":"static-phrase","query":"\"static site\"","grades":{"static-site":2},"must_top3":["static-site"],"excluded":["static-apart"],"why":"a phrase must not match the page that separates the words"}
+{"id":"dictionary","query":"dictionary","grades":{"dictionary":2,"shard-layout":1},"must_top3":["dictionary"],"why":"repetition in the body, not one mention"}
+{"id":"term-dictionary","query":"term dictionary","grades":{"dictionary":2},"must_top3":["dictionary"],"why":"two terms that co-occur in one page"}
+{"id":"positions","query":"positions","grades":{"positions":2},"must_top3":["positions"],"why":"title plus repetition beats filler"}
+{"id":"phrase-adjacency","query":"phrase adjacency","grades":{"positions":2},"must_top3":["positions"],"why":"the vocabulary of the phrase feature"}
+{"id":"index-format","query":"index format","grades":{"index-format":2},"must_top3":["index-format"],"why":"the page titled with both terms"}
+{"id":"stemming","query":"indexing","grades":{"index-format":2,"stemming":1},"must_top3":["index-format"],"why":"the query is an inflection: index and indexing must meet, and the title match wins"}
+{"id":"typo","query":"shardd","grades":{"shard-routing":2,"shard-layout":1},"must_top3":["shard-routing"],"correction":"shard","why":"a one-edit typo must be read as the nearest dictionary term and reported"}
+{"id":"title-only","query":"sharding","grades":{"sharding-primer":2},"must_top3":["sharding-primer"],"why":"the term exists only in one title, so title weighting is what makes it findable"}
+{"id":"facet","query":"facet","grades":{"facets":2},"must_top3":["facets"],"why":"the facet page"}
+{"id":"filter-lang","query":"filter lang","grades":{"facets":2},"must_top3":["facets"],"why":"two facet words in one page"}
+{"id":"unicode","query":"unicode café","grades":{"unicode":2},"must_top3":["unicode"],"why":"non-ASCII terms are indexed as UTF-8, not dropped"}
+{"id":"contact","query":"contact","grades":{"contact":2},"must_top3":["contact"],"why":"a rare term in one page"}
+{"id":"shard-reference","query":"shard","filters":["section=reference"],"grades":{"shard-routing":2,"long-page":1},"must_top3":["shard-routing"],"why":"a filter must remove the guide pages from the same ranking"}
+{"id":"shard-guide","query":"shard","filters":["section=guide"],"grades":{"shard-layout":2},"must_top3":["shard-layout"],"why":"the other side of the same filter"}
+{"id":"no-hits","query":"nonexistentword","grades":{},"expect_hits":0,"why":"a query that matches nothing stays empty, not an error"}
+{"id":"postings","query":"postings positions","grades":{"positions":2,"index-format":1},"must_top3":["positions"],"why":"two pages, each with one term; the one with the title match ranks first"}
+{"id":"long-tail","query":"warehouse inventory","grades":{"long-page":2},"must_top3":["long-page"],"why":"a long page that is the only match must still be found"}

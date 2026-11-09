@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="section" content="reference">
+  <title>Typo tolerance and one edit</title>
+</head>
+<body>
+  <main>
+    <p><a href="../index.html">Back to search</a></p>
+    <h1>Typo tolerance and one edit</h1>
+    <p>Typo tolerance is opt-in. With <strong>Typo tolerance</strong> enabled, a query term can match a dictionary term one edit away: one insertion, deletion, substitution or adjacent transposition.</p>
+
+    <h2>What counts as one edit</h2>
+    <p><code>index</code> can find <code>indx</code> and <code>inxed</code>; it cannot find a word two edits away. The fuzzy walk visits the sorted dictionary, so it costs more than an exact query and is off by default.</p>
+
+    <h2>Why not always on</h2>
+    <p>A one-edit match is a guess. On a short query it can pull in a common word that was never typed, so the exact result must stay first. The UI keeps fuzzy as an explicit control rather than hiding it in every search.</p>
+
+    <h2>Title boost is separate</h2>
+    <p>Typo tolerance decides which terms match; title boost decides how much a match in the title counts. They are independent arguments, and changing one does not change the other.</p>
+  </main>
+</body>
+</html>

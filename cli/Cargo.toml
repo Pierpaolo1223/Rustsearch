@@ -1,0 +1,18 @@
+[package]
+name = "rustsearch-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Build, inspect and query rustsearch indexes"
+
+[[bin]]
+name = "rustsearch"
+path = "src/main.rs"
+
+[dependencies]
+rustsearch-core = { workspace = true, features = ["std"] }
+rustsearch-index.workspace = true
+# H1: minisign is the detached signature the CLI can verify. One crate, no runtime
+# cost, and it only compiles into the native CLI — never into the WASM module.
+minisign-verify = "0.3"

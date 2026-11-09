@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="section" content="guide">
+  <title>How BM25F ranks a hit</title>
+</head>
+<body>
+  <main>
+    <p><a href="../index.html">Back to search</a></p>
+    <h1>How BM25F ranks a hit</h1>
+    <p>Ranking is BM25F, not a boolean match. A document that contains a query term once can outrank a longer document that repeats it, because term frequency, inverse document frequency and field length all take part.</p>
+
+    <h2>Title boost</h2>
+    <p>The title is a weighted field. The default boost of 2 means a title match is worth twice a body match of the same term; 0 ignores titles and 10 trusts them most. The UI exposes the value as a single argument, and the artifact records the token counts the score needs.</p>
+
+    <h2>Reading the score</h2>
+    <p>Higher is better, but the number is only comparable inside one query and one index. A score of 7 is not twice a score of 3.5; use it to order hits, then read the snippet to decide.</p>
+
+    <h2>Why a phrase can miss</h2>
+    <p>The index stores terms, not positions. A query with two words finds documents that contain both, and BM25F decides the order; it does not require them to be adjacent.</p>
+  </main>
+</body>
+</html>

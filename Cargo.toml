@@ -1,0 +1,13 @@
+[workspace]
+resolver = "2"
+members = ["core", "indexer", "cli", "wasm"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+rust-version = "1.81"
+
+[workspace.dependencies]
+rustsearch-core = { path = "core" }
+rustsearch-index = { path = "indexer" }

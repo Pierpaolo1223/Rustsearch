@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en">
+<head><title>Install rustsearch</title></head>
+<body>
+  <nav>Home / Guide</nav>
+  <article>
+    <h1>Install</h1>
+    <p>Build the index with <code>rustsearch build public -o index.rsx</code>.</p>
+    <p>Upload the artifact to object storage and serve it with an immutable cache
+    header. Cloudflare R2 and Workers are a natural fit.</p>
+    <pre><code>rustsearch build public -o index.rsx --base-url https://example.com</code></pre>
+  </article>
+</body>
+</html>

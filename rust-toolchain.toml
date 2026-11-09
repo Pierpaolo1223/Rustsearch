@@ -1,0 +1,10 @@
+# H6: the toolchain a release is built with, pinned to a version that is installed
+# and satisfies the workspace's `rust-version = "1.81"`. The fuzz workspace keeps its
+# own nightly requirement (the sanitizer), which is why it is a separate workspace.
+#
+# A release job that needs bit-reproducibility records `rustc -vV` next to the
+# artifact: the channel below is the pin, the compiler commit is the identity.
+[toolchain]
+channel = "1.95.0"
+components = ["rustfmt", "clippy"]
+profile = "minimal"

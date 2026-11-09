@@ -1,0 +1,46 @@
+# H6: the supply-chain gate. `cargo deny check` in CI reads this file; the three
+# sections that matter are advisories (a known-bad crate), licenses (a dependency
+# whose terms the project cannot ship) and sources (a crate that did not come from
+# crates.io). `tests` on multiple versions is a warning, not a failure: the
+# workspace has one dependency tree and a duplicate is worth seeing, not blocking.
+
+[advisories]
+version = 2
+# A yanked crate is a crate its author asked you to stop using. Treat it as a
+# failure; an advisory that is knowingly ignored goes in `ignore` with a reason.
+yanked = "deny"
+unmaintained = "warn"
+ignore = []
+
+[licenses]
+version = 2
+# The allowlist is what a published artifact may carry. The `confidence-threshold`
+# is the license parser's, not a judgement call: a file it cannot classify must be
+# resolved by hand rather than assumed permissive.
+confidence-threshold = 0.93
+allow = [
+  "MIT",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Unicode-3.0",
+  "Zlib",
+  "MPL-2.0",
+  "CC0-1.0",
+  "OpenSSL",
+]
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+# Nothing is banned outright today. A crate whose build script or network access is
+# unacceptable is added here with the reason, not silently removed from Cargo.lock.
+deny = []
+
+[sources]
+# The only source a release may be built from.
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

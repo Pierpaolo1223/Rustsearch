@@ -1,0 +1,24 @@
+# searchui demo curation — open the page with
+#
+#   http://127.0.0.1:8765/?curate=curated/curate.txt
+#
+# A rule is `query | pin /path` or `query | boost /path factor`. A path must start
+# with `/` — the engine refuses anything that could name another origin — and it is
+# matched against the hit URL ignoring that one leading slash, so the demo artifact's
+# `demo/site/<file>.html` (built with `--base-url demo/site`) matches
+# `/demo/site/<file>.html`. The engine parses this file with the same code as
+# `rustsearch search --curate`, and a pin only reorders hits the query already
+# returned: it can never add a page to a result list.
+#
+# The curated pages are hand-written for this demo and live in `curated/`; setup.sh
+# copies them into `demo/site/`, which is why the paths below are under `demo/site/`.
+
+# A question about ranking should start from the page that explains it.
+ranking | pin /demo/site/curated-ranking.html
+
+# The typo page is the better second answer for a spelling question, but it must not
+# outrank a real match for the word itself.
+typo | boost /demo/site/curated-typos.html 2
+
+# "start here" is the demo's own entry point: pin it, do not boost it.
+start here | pin /demo/site/curated-start-here.html

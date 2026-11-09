@@ -1,0 +1,10 @@
+format rsx-shard-1
+total 26801
+checksum 8fc29da534f7e2b9
+part meta 0 2449 73059116b2a5fc4e index/meta.bin
+part docrecords 2449 960 95e83d91ecc8a2f7 index/docrecords.bin
+part chunk00000 3409 1014 235c5b58aa8aeb44 index/chunk00000.bin
+part chunk00001 4423 989 dedb816d039cdfa9 index/chunk00001.bin
+part chunk00002 5412 554 246e1e8eead8df67 index/chunk00002.bin
+part strings 5966 1080 9af17b45e60a7fb9 index/strings.bin
+part texts 7046 19755 556c01752b207b8c index/texts.bin

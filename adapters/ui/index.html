@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="A local playground for the Rustsearch engine: build-time BM25, facets, title boosting and page grouping, queried in the browser through WASM.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; connect-src 'self' https:; font-src 'self'; base-uri 'none'; form-action 'self'">
+  <title>Rustsearch — search playground</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#results-heading">Skip to results</a>
+
+  <header class="masthead">
+    <div class="brand">
+      <span class="mark" aria-hidden="true">rs</span>
+      <div class="brand-text">
+        <p class="wordmark">Rustsearch</p>
+        <p class="tagline">An immutable full-text index, queried in the browser.</p>
+      </div>
+    </div>
+    <div class="masthead-actions">
+      <button id="theme" class="button ghost" type="button" aria-label="Color theme: system">
+        <span id="theme-label" class="button-label">Auto</span>
+      </button>
+      <button id="load-index" class="button ghost" type="button">
+        <span class="button-label">Load index…</span>
+      </button>
+      <input id="index-file" type="file" accept=".rsx,application/octet-stream" hidden>
+    </div>
+  </header>
+
+  <main id="main" class="page">
+    <noscript>
+      <p class="card">This playground runs the search engine in WebAssembly and needs JavaScript enabled.</p>
+    </noscript>
+
+    <section class="search-panel" aria-labelledby="search-heading">
+      <h1 id="search-heading" class="sr-only">Search the demo index</h1>
+
+      <form id="search-form" role="search" novalidate>
+        <label class="sr-only" for="q">Search the index</label>
+        <div class="field">
+          <svg class="field-icon" aria-hidden="true" viewBox="0 0 20 20" width="20" height="20" fill="none">
+            <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.6"></circle>
+            <path d="M12.7 12.7 17 17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>
+          </svg>
+          <input id="q" name="q" type="search" enterkeyhint="search" autocomplete="off"
+                 autocapitalize="off" spellcheck="false" aria-describedby="search-hint"
+                 placeholder="Search the index…">
+          <button id="clear" class="clear" type="button" aria-label="Clear search" hidden>×</button>
+          <kbd class="kbd" aria-hidden="true">/</kbd>
+        </div>
+        <p id="search-hint" class="hint">
+          <span class="hint-label">Try</span>
+          <button class="hint-query" type="button" data-query="postgres">postgres</button>
+          <button class="hint-query" type="button" data-query="security">security</button>
+          <button class="hint-query" type="button" data-query="immutable index">immutable index</button>
+          <button class="hint-query" type="button" data-query="docker compose">docker compose</button>
+        </p>
+      </form>
+
+      <div id="facets" class="facets">
+        <div class="facet-bar placeholder" aria-hidden="true">
+          <span class="facet-skeleton"></span>
+          <span class="facet-skeleton"></span>
+          <span class="facet-skeleton"></span>
+        </div>
+      </div>
+
+      <details id="options" class="options">
+        <summary class="options-summary">
+          <span>Search options</span>
+          <span id="options-badge" class="badge" hidden></span>
+        </summary>
+        <div class="options-grid">
+          <label class="option">
+            <input id="fuzzy" type="checkbox">
+            <span class="option-text">
+              <span class="option-title">Typo tolerance</span>
+              <span class="option-note">One edit, bounded by the fuzzy walk.</span>
+            </span>
+          </label>
+          <label class="option">
+            <input id="group" type="checkbox">
+            <span class="option-text">
+              <span class="option-title">Group by page</span>
+              <span class="option-note">One hit per URL when a long page was split.</span>
+            </span>
+          </label>
+          <label class="option option-range" for="boost">
+            <span class="option-text">
+              <span class="option-title">Title boost <output id="boost-value">2</output></span>
+              <span class="option-note">0 ignores titles, 10 trusts them most.</span>
+            </span>
+            <input id="boost" type="range" min="0" max="10" step="1" value="2">
+          </label>
+        </div>
+        <p class="options-note">
+          Every option changes one engine argument. The timing under each result list is the
+          WASM query plus its JSON parse, not the network.
+        </p>
+      </details>
+    </section>
+
+    <section class="results-panel" aria-labelledby="results-heading">
+      <div class="results-head">
+        <h2 id="results-heading" class="sr-only">Results</h2>
+        <p id="summary" class="summary" role="status" aria-live="polite">Loading the index…</p>
+        <p id="timing" class="timing"></p>
+      </div>
+
+      <div id="state" class="state">
+        <div class="skeleton" aria-hidden="true">
+          <div class="skeleton-row"></div>
+          <div class="skeleton-row"></div>
+          <div class="skeleton-row"></div>
+        </div>
+      </div>
+
+      <ol id="results" class="results" aria-labelledby="results-heading"></ol>
+
+      <div class="more-row">
+        <button id="more" class="button" type="button" hidden>Show 10 more</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p id="engine-stats" class="engine-stats">Loading…</p>
+    <p class="footer-note">
+      Snippets and titles are inserted as text, never as markup. Ranges are validated
+      before they reach a <code>&lt;mark&gt;</code>.
+    </p>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

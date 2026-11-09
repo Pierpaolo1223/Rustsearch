@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="section" content="operations">
+  <title>Build once, serve static</title>
+</head>
+<body>
+  <main>
+    <p><a href="../index.html">Back to search</a></p>
+    <h1>Build once, serve static</h1>
+    <p>The index is immutable. The build reads the site, writes one <code>.rsx</code> artifact and publishes it with the HTML; serving a query is a read of that file, not a write to a database.</p>
+
+    <h2>Cache the artifact, not queries</h2>
+    <p>Because the artifact carries a checksum, a deploy can upload a new name and switch the page to it. The old artifact stays valid for clients that are still loading it, so there is no cache-invalidation race between the index and the pages it describes.</p>
+
+    <h2>Rebuild when the corpus changes</h2>
+    <p>A changed page requires a new artifact. The build is deterministic: the same input tree produces the same checksum, which makes it safe to run in CI and compare against the artifact in production.</p>
+
+    <h2>One artifact, many clients</h2>
+    <p>The same file works in the browser through WASM, in a Worker for shard reads and in the CLI for tests. There is no second implementation to keep in step with the first.</p>
+  </main>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="section" content="guide">
+  <title>Grouping a long page</title>
+</head>
+<body>
+  <main>
+    <p><a href="../index.html">Back to search</a></p>
+    <h1>Grouping a long page</h1>
+    <p>A long page is indexed at paragraph granularity and presented at page granularity. Each chunk is a document with the same URL, title and facets, so a query can match the paragraph that answers it without making the reader open the whole page.</p>
+
+    <h2>Why one page becomes documents</h2>
+    <p>A page longer than the split threshold becomes several documents that share a URL. The artifact writes the title and URL once, and the record page keeps the page identity, so grouping does not need to fetch a string block.</p>
+
+    <h2>What the option changes</h2>
+    <p>With <strong>Group by page</strong> enabled, the best chunk represents the page and the others only raise its <code>matches</code> count. The limit counts pages, so pagination is not consumed by four paragraphs of one document.</p>
+
+    <h2>When to turn it off</h2>
+    <p>Turn grouping off when the question is about a section, not a page: then each chunk competes on its own score, and the snippet shows exactly the paragraph that matched.</p>
+  </main>
+</body>
+</html>
