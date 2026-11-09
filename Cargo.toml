@@ -9,5 +9,5 @@ license = "MIT"
 rust-version = "1.81"
 
 [workspace.dependencies]
-rustsearch-core = { path = "core" }
-rustsearch-index = { path = "indexer" }
+rustsearch-core = { path = "core", version = "0.1.0" }
+rustsearch-index = { path = "indexer", version = "0.1.0" }

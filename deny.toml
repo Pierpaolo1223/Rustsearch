@@ -9,7 +9,13 @@ version = 2
 # A yanked crate is a crate its author asked you to stop using. Treat it as a
 # failure; an advisory that is knowingly ignored goes in `ignore` with a reason.
 yanked = "deny"
-unmaintained = "warn"
+# Since cargo-deny 0.18 this is a **scope**, not a severity (the accepted values are
+# `all`, `workspace`, `transitive`, `none`; "warn" is rejected before any check
+# runs, which is how this file broke the CI job). `workspace` reports an unmaintained
+# advisory for a direct dependency; such an advisory is a warning, and `cargo deny
+# check` still exits 0 for it — while `cargo audit --deny warnings`, also in CI,
+# fails on it.
+unmaintained = "workspace"
 ignore = []
 
 [licenses]
