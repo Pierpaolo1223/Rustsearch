@@ -724,7 +724,8 @@ rustsearch/
 ├── wasm/        wasm-bindgen boundary (one Engine, one JSON string)
 ├── adapters/    Cloudflare Worker + R2 client and static WASM browser UI (+ Node tests)
 ├── fuzz/        cargo-fuzz targets for binary parsing, attachment, filters and extraction
-└── fixtures/    a small site used by the tests
+├── fixtures/    a small site used by the tests
+└── .githooks/   pre-commit linter (enable with `git config core.hooksPath .githooks`)
 ```
 
 Tests: `cargo test --workspace`; focused adapter tests are run with
@@ -733,3 +734,13 @@ Tests: `cargo test --workspace`; focused adapter tests are run with
 reproduces the 1M metadata-split check. CI gates formatting, clippy, Rust and adapter
 tests, the ranking fixture, dependency advisories/licenses, an SBOM, reproducibility
 and a fuzz smoke. Format and trust-boundary details: [`DESIGN.md`](DESIGN.md).
+
+Commits are linted locally: `.githooks/pre-commit` runs `cargo fmt --check` and
+`cargo clippy -- -D warnings` when Rust files are staged, and `node --check` on every
+staged JavaScript module. Enable it once per clone with
+`git config core.hooksPath .githooks`; CI still runs the full suite, because a hook can
+be skipped with `--no-verify`.
+
+## License
+
+MIT — see [`LICENSE`](LICENSE).

@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Pre-commit linter: what the hardening workflow runs, limited to the files this
+# commit touches, so a formatting slip or a clippy warning stops before it lands.
+#
+# Enable once per clone (hooks are not cloned, only the script is):
+#
+#   git config core.hooksPath .githooks
+#
+# `cargo fmt --check` and `clippy -- -D warnings` are the Rust linter; `node --check`
+# parses each staged JavaScript module without running it. A hook is a convenience,
+# not the gate: `git commit --no-verify` skips it, which is why CI still runs the
+# full suite.
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+staged() {
+  git diff --cached --name-only --diff-filter=ACM -- "$@"
+}
+
+rust_files=$(staged '*.rs' 'Cargo.toml' 'Cargo.lock' '*Cargo.toml')
+js_files=$(staged '*.js' '*.mjs')
+
+if [ -n "$rust_files" ]; then
+  cargo fmt --all -- --check
+  cargo clippy --workspace --all-targets --locked --quiet -- -D warnings
+fi
+
+if [ -n "$js_files" ]; then
+  while IFS= read -r file; do
+    node --check "$file"
+  done <<< "$js_files"
+fi
