@@ -125,9 +125,15 @@ jobs:
       - name: licences, bans, sources
         run: cargo deny check
       - name: sbom
+        # cargo-cyclonedx 0.5 has no `--output`: `--all` writes one `<crate>.cdx.json`
+        # next to each workspace member, so they are collected into one directory for
+        # the upload instead of asking for a path the tool does not accept.
         run: |
           cargo install cargo-cyclonedx --locked
-          cargo cyclonedx --format json --output sbom
+          cargo cyclonedx --format json --all
+          mkdir -p sbom
+          find . -name '*.cdx.json' -not -path './target/*' -exec cp {} sbom/ \;
+          ls -l sbom
       - uses: actions/upload-artifact@v4
         with:
           name: rustsearch-sbom
